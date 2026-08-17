@@ -1,18 +1,22 @@
 import type { Message } from './types'
 
-const USE_MOCK = true // flip to false once backend exists
+const API_URL = 'http://localhost:3001/api/chat'
 
-export async function sendMessage(
-  history: Message[],
-  newContent: string
-): Promise<Message> {
-  if (USE_MOCK) {
-    return mockSendMessage(newContent)
+export function getConversationId(): string {
+  let id = localStorage.getItem('conversationId')
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('conversationId', id)
   }
-  const res = await fetch('/api/chat', {
+  return id
+}
+
+export async function sendMessage(newContent: string): Promise<Message> {
+  const conversationId = getConversationId()
+  const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: [...history, { role: 'user', content: newContent }] }),
+    body: JSON.stringify({ message: newContent, conversationId }),
   })
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   const data = await res.json()
@@ -24,12 +28,15 @@ export async function sendMessage(
   }
 }
 
-async function mockSendMessage(userContent: string): Promise<Message> {
-  await new Promise((r) => setTimeout(r, 600)) // fake latency
-  return {
-    id: crypto.randomUUID(),
-    role: 'assistant',
-    content: `This is a mocked response to: "${userContent}"`,
-    createdAt: Date.now(),
-  }
+export async function loadHistory(): Promise<Message[]> {
+  const conversationId = getConversationId()
+  const res = await fetch(`http://localhost:3001/api/chat/${conversationId}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.map((m: any) => ({
+    id: m._id,
+    role: m.role,
+    content: m.content,
+    createdAt: new Date(m.createdAt).getTime(),
+  }))
 }

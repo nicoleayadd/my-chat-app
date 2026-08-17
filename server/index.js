@@ -18,9 +18,17 @@ app.post('/api/chat', async (req, res) => {
 
     await MessageModel.create({ conversationId, role: 'user', content: message })
 
+    // Pull past messages for this conversation to give Gemini context
+    const history = await MessageModel.find({ conversationId }).sort({ createdAt: 1 })
+
+    const contents = history.map((m) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }],
+    }))
+
     const response = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
-      contents: message,
+      contents,
     })
 
     await MessageModel.create({ conversationId, role: 'assistant', content: response.text })

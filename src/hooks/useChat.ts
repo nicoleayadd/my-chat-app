@@ -1,12 +1,22 @@
-import { useState } from 'react'
-import { sendMessage } from '../lib/api'
+import { useState, useEffect } from 'react'
+import { sendMessage, loadHistory } from '../lib/api'
 import type { Message } from '../lib/types'
 
 export function useChat() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Hey! How can I help today?', createdAt: Date.now() },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    loadHistory().then((history) => {
+      if (history.length > 0) {
+        setMessages(history)
+      } else {
+        setMessages([
+          { id: '1', role: 'assistant', content: 'Hey! How can I help today?', createdAt: Date.now() },
+        ])
+      }
+    })
+  }, [])
 
   async function send(content: string) {
     if (!content.trim()) return
@@ -14,7 +24,7 @@ export function useChat() {
     setMessages((prev) => [...prev, userMsg])
     setLoading(true)
     try {
-      const reply = await sendMessage(messages, content)
+      const reply = await sendMessage(content)
       setMessages((prev) => [...prev, reply])
     } finally {
       setLoading(false)
