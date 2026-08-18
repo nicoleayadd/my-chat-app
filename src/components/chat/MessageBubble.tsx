@@ -5,6 +5,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Message } from '../../lib/types'
 import { cn } from '../../lib/utils'
+import { submitFeedback } from '../../lib/api'
+import { FeedbackModal } from './FeedbackModal'
 
 function CitationBadge({ number, citation }: { number: React.ReactNode; citation?: { title: string; uri: string } }) {
   if (!citation) return null
@@ -56,6 +58,8 @@ export function MessageBubble({ message, onRegenerate, onSwitchVersion, disabled
   const isUser = message.role === 'user'
   const isEmpty = !isUser && message.content === ''
   const [copied, setCopied] = useState(false)
+  const [feedback, setFeedback] = useState(message.feedback || { rating: null, reasons: [], comment: '' })
+  const [showModal, setShowModal] = useState(false)
 
   const versions = message.versions || []
   const activeIndex = message.activeVersionIndex ?? 0
@@ -65,6 +69,27 @@ export function MessageBubble({ message, onRegenerate, onSwitchVersion, disabled
     navigator.clipboard.writeText(message.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function handleThumbsUp() {
+    const nextRating = feedback.rating === 'up' ? null : 'up'
+    setFeedback({ rating: nextRating, reasons: [], comment: '' })
+    await submitFeedback(message.id, nextRating, [], '')
+  }
+
+  function handleThumbsDown() {
+    if (feedback.rating === 'down') {
+      setFeedback({ rating: null, reasons: [], comment: '' })
+      submitFeedback(message.id, null, [], '')
+      return
+    }
+    setShowModal(true)
+  }
+
+  async function handleModalSubmit(reasons: string[], comment: string) {
+    setFeedback({ rating: 'down', reasons, comment })
+    setShowModal(false)
+    await submitFeedback(message.id, 'down', reasons, comment)
   }
 
   return (
@@ -130,6 +155,28 @@ export function MessageBubble({ message, onRegenerate, onSwitchVersion, disabled
             {copied ? 'Copied!' : 'Copy'}
           </button>
 
+          <button
+            onClick={handleThumbsUp}
+            className={cn(
+              'px-1.5 py-0.5 rounded-md hover:bg-slate-200',
+              feedback.rating === 'up' && 'bg-indigo-100 ring-1 ring-indigo-400'
+            )}
+            title="Good response"
+          >
+            👍
+          </button>
+
+          <button
+            onClick={handleThumbsDown}
+            className={cn(
+              'px-1.5 py-0.5 rounded-md hover:bg-slate-200',
+              feedback.rating === 'down' && 'bg-indigo-100 ring-1 ring-indigo-400'
+            )}
+            title="Bad response"
+          >
+            👎
+          </button>
+
           {onRegenerate && (
             <button
               onClick={() => onRegenerate(message.id)}
@@ -166,6 +213,10 @@ export function MessageBubble({ message, onRegenerate, onSwitchVersion, disabled
       )}
 
       {!isUser && !isEmpty && message.metadata && <MetadataAccordion metadata={message.metadata} />}
+
+      {showModal && (
+        <FeedbackModal onCancel={() => setShowModal(false)} onSubmit={handleModalSubmit} />
+      )}
     </div>
   )
 }

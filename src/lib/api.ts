@@ -1,4 +1,4 @@
-import type { Message, ConversationSummary } from './types'
+import type { Message, ConversationSummary, Feedback } from './types'
 
 const BASE_URL = 'http://localhost:3001'
 
@@ -95,6 +95,22 @@ export async function setActiveVersion(messageId: string, index: number): Promis
   })
 }
 
+export async function submitFeedback(
+  messageId: string,
+  rating: 'up' | 'down' | null,
+  reasons: string[] = [],
+  comment: string = ''
+): Promise<Feedback | null> {
+  const res = await fetch(`${BASE_URL}/api/chat/message/${messageId}/feedback`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, reasons, comment }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.feedback
+}
+
 export async function loadHistory(conversationId: string): Promise<Message[]> {
   const res = await fetch(`${BASE_URL}/api/chat/${conversationId}`)
   if (!res.ok) return []
@@ -108,6 +124,7 @@ export async function loadHistory(conversationId: string): Promise<Message[]> {
     metadata: m.metadata || undefined,
     versions: m.versions || [],
     activeVersionIndex: m.activeVersionIndex ?? 0,
+    feedback: m.feedback || { rating: null, reasons: [], comment: '' },
   }))
 }
 

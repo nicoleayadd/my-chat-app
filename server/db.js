@@ -15,6 +15,15 @@ const versionSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const feedbackSchema = new mongoose.Schema(
+  {
+    rating: { type: String, enum: ['up', 'down', null], default: null },
+    reasons: { type: [String], default: [] },
+    comment: { type: String, default: '' },
+  },
+  { _id: false }
+)
+
 const messageSchema = new mongoose.Schema({
   conversationId: { type: String, required: true, index: true },
   role: { type: String, enum: ['user', 'assistant'], required: true },
@@ -23,6 +32,7 @@ const messageSchema = new mongoose.Schema({
   metadata: { type: Object, default: null },
   versions: { type: [versionSchema], default: [] },
   activeVersionIndex: { type: Number, default: 0 },
+  feedback: { type: feedbackSchema, default: () => ({}) },
   createdAt: { type: Date, default: Date.now },
 })
 

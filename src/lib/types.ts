@@ -21,6 +21,12 @@ export interface MessageVersion {
   createdAt: string
 }
 
+export interface Feedback {
+  rating: 'up' | 'down' | null
+  reasons: string[]
+  comment: string
+}
+
 export interface Message {
   id: string
   role: Role
@@ -30,6 +36,7 @@ export interface Message {
   metadata?: MessageMetadata
   versions?: MessageVersion[]
   activeVersionIndex?: number
+  feedback?: Feedback
 }
 
 export interface ConversationSummary {

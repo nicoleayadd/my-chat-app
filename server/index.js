@@ -162,18 +162,34 @@ app.post('/api/chat/regenerate/stream', async (req, res) => {
   }
 })
 
-app.patch('/api/chat/message/:id/version', async (req, res) => {
+app.patch('/api/chat/message/:id/feedback', async (req, res) => {
   try {
-    const { index } = req.body
+    const { rating, reasons, comment } = req.body
+    if (rating !== 'up' && rating !== 'down' && rating !== null) {
+      return res.status(400).json({ error: 'invalid rating' })
+    }
     const msg = await MessageModel.findById(req.params.id)
-    if (!msg || !msg.versions[index]) return res.status(404).json({ error: 'not found' })
-    const v = msg.versions[index]
-    msg.content = v.content
-    msg.citations = v.citations
-    msg.metadata = v.metadata
-    msg.activeVersionIndex = index
+    if (!msg) return res.status(404).json({ error: 'not found' })
+    msg.feedback = { rating, reasons: reasons || [], comment: comment || '' }
     await msg.save()
-    res.json({ ok: true })
+    res.json({ ok: true, feedback: msg.feedback })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'server error' })
+  }
+})
+
+app.patch('/api/chat/message/:id/feedback', async (req, res) => {
+  try {
+    const { rating, comment } = req.body
+    if (rating !== 'up' && rating !== 'down' && rating !== null) {
+      return res.status(400).json({ error: 'invalid rating' })
+    }
+    const msg = await MessageModel.findById(req.params.id)
+    if (!msg) return res.status(404).json({ error: 'not found' })
+    msg.feedback = { rating, comment: comment || '' }
+    await msg.save()
+    res.json({ ok: true, feedback: msg.feedback })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'server error' })
