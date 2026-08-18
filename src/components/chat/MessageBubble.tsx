@@ -3,6 +3,8 @@ import { cn } from '../../lib/utils'
 
 export function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === 'user'
+  const isEmpty = !isUser && message.content === ''
+
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
@@ -11,7 +13,15 @@ export function MessageBubble({ message }: { message: Message }) {
           isUser ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-900'
         )}
       >
-        {message.content}
+        {isEmpty ? (
+          <span className="flex gap-1 py-1">
+            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
+            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.15s]" />
+            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.3s]" />
+          </span>
+        ) : (
+          message.content
+        )}
       </div>
     </div>
   )
