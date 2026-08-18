@@ -9,6 +9,8 @@ const messageSchema = new mongoose.Schema({
   conversationId: { type: String, required: true, index: true },
   role: { type: String, enum: ['user', 'assistant'], required: true },
   content: { type: String, required: true },
+  citations: { type: Array, default: [] },
+  metadata: { type: Object, default: null },
   createdAt: { type: Date, default: Date.now },
 })
 

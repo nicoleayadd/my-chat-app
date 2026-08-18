@@ -29,11 +29,24 @@ export function useChat(conversationId: string) {
     setError(null)
 
     try {
-      await sendMessageStream(conversationId, content, (chunk) => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))
-        )
-      })
+      await sendMessageStream(
+        conversationId,
+        content,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))
+          )
+        },
+        (payload) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: payload.fullText, citations: payload.citations, metadata: payload.metadata }
+                : m
+            )
+          )
+        }
+      )
     } catch (err: any) {
       setMessages((prev) => prev.filter((m) => m.id !== assistantId))
       if (err.message === 'RATE_LIMIT') {

@@ -24,7 +24,8 @@ export function startNewConversation(): string {
 export async function sendMessageStream(
   conversationId: string,
   newContent: string,
-  onChunk: (text: string) => void
+  onChunk: (text: string) => void,
+  onDone: (payload: { fullText: string; citations: any[]; metadata: any }) => void
 ): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/chat/stream`, {
     method: 'POST',
@@ -54,6 +55,7 @@ export async function sendMessageStream(
       if (payload.error === 'rate_limit') throw new Error('RATE_LIMIT')
       if (payload.error) throw new Error('SERVER_ERROR')
       if (payload.text) onChunk(payload.text)
+      if (payload.done) onDone(payload)
     }
   }
 }
@@ -67,6 +69,8 @@ export async function loadHistory(conversationId: string): Promise<Message[]> {
     role: m.role,
     content: m.content,
     createdAt: new Date(m.createdAt).getTime(),
+    citations: m.citations || [],
+    metadata: m.metadata || undefined,
   }))
 }
 
