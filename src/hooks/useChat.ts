@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
-import { sendMessageStream, loadHistory, getConversationId } from '../lib/api'
+import { sendMessageStream, loadHistory } from '../lib/api'
 import type { Message } from '../lib/types'
 
-export function useChat() {
+export function useChat(conversationId: string) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadHistory().then((history) => {
+    loadHistory(conversationId).then((history) => {
       if (history.length > 0) {
         setMessages(history)
       } else {
@@ -17,11 +17,10 @@ export function useChat() {
         ])
       }
     })
-  }, [])
+  }, [conversationId])
 
   async function send(content: string) {
     if (!content.trim()) return
-    const conversationId = getConversationId()
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content, createdAt: Date.now() }
     const assistantId = crypto.randomUUID()
 

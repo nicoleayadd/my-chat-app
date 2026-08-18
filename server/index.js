@@ -59,5 +59,20 @@ app.get('/api/chat/:conversationId', async (req, res) => {
   res.json(messages)
 })
 
+app.get('/api/conversations', async (req, res) => {
+  const conversations = await MessageModel.aggregate([
+    { $sort: { createdAt: 1 } },
+    {
+      $group: {
+        _id: '$conversationId',
+        firstMessage: { $first: '$content' },
+        lastMessageAt: { $last: '$createdAt' },
+      },
+    },
+    { $sort: { lastMessageAt: -1 } },
+  ])
+  res.json(conversations)
+})
+
 const PORT = 3001
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))

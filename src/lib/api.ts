@@ -1,6 +1,6 @@
-import type { Message } from './types'
+import type { Message, ConversationSummary } from './types'
 
-const API_URL = 'http://localhost:3001/api/chat'
+const BASE_URL = 'http://localhost:3001'
 
 export function getConversationId(): string {
   let id = localStorage.getItem('conversationId')
@@ -11,34 +11,14 @@ export function getConversationId(): string {
   return id
 }
 
-export async function sendMessage(newContent: string): Promise<Message> {
-  const conversationId = getConversationId()
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: newContent, conversationId }),
-  })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const data = await res.json()
-  return {
-    id: crypto.randomUUID(),
-    role: 'assistant',
-    content: data.content,
-    createdAt: Date.now(),
-  }
+export function setActiveConversationId(id: string) {
+  localStorage.setItem('conversationId', id)
 }
 
-export async function loadHistory(): Promise<Message[]> {
-  const conversationId = getConversationId()
-  const res = await fetch(`http://localhost:3001/api/chat/${conversationId}`)
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.map((m: any) => ({
-    id: m._id,
-    role: m.role,
-    content: m.content,
-    createdAt: new Date(m.createdAt).getTime(),
-  }))
+export function startNewConversation(): string {
+  const id = crypto.randomUUID()
+  localStorage.setItem('conversationId', id)
+  return id
 }
 
 export async function sendMessageStream(
@@ -46,7 +26,7 @@ export async function sendMessageStream(
   newContent: string,
   onChunk: (text: string) => void
 ): Promise<void> {
-  const res = await fetch('http://localhost:3001/api/chat/stream', {
+  const res = await fetch(`${BASE_URL}/api/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: newContent, conversationId }),
@@ -76,4 +56,22 @@ export async function sendMessageStream(
       if (payload.text) onChunk(payload.text)
     }
   }
+}
+
+export async function loadHistory(conversationId: string): Promise<Message[]> {
+  const res = await fetch(`${BASE_URL}/api/chat/${conversationId}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.map((m: any) => ({
+    id: m._id,
+    role: m.role,
+    content: m.content,
+    createdAt: new Date(m.createdAt).getTime(),
+  }))
+}
+
+export async function loadConversations(): Promise<ConversationSummary[]> {
+  const res = await fetch(`${BASE_URL}/api/conversations`)
+  if (!res.ok) return []
+  return res.json()
 }

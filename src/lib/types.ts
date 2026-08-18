@@ -6,3 +6,9 @@ export interface Message {
   content: string
   createdAt: number
 }
+
+export interface ConversationSummary {
+  _id: string
+  firstMessage: string
+  lastMessageAt: string
+}
