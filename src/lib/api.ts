@@ -21,21 +21,21 @@ export function startNewConversation(): string {
   return id
 }
 
-export async function sendMessageStream(
-  conversationId: string,
-  newContent: string,
-  onChunk: (text: string) => void,
-  onDone: (payload: { fullText: string; citations: any[]; metadata: any }) => void
-): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/chat/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: newContent, conversationId }),
-  })
+type StreamDonePayload = {
+  fullText: string
+  citations: any[]
+  metadata: any
+  messageId: string
+  versions: any[]
+  activeVersionIndex: number
+}
 
-  if (!res.ok || !res.body) {
-    throw new Error('SERVER_ERROR')
-  }
+async function consumeStream(
+  res: Response,
+  onChunk: (text: string) => void,
+  onDone: (payload: StreamDonePayload) => void
+) {
+  if (!res.ok || !res.body) throw new Error('SERVER_ERROR')
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -60,6 +60,41 @@ export async function sendMessageStream(
   }
 }
 
+export async function sendMessageStream(
+  conversationId: string,
+  newContent: string,
+  onChunk: (text: string) => void,
+  onDone: (payload: StreamDonePayload) => void
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: newContent, conversationId }),
+  })
+  await consumeStream(res, onChunk, onDone)
+}
+
+export async function regenerateStream(
+  messageId: string,
+  onChunk: (text: string) => void,
+  onDone: (payload: StreamDonePayload) => void
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/chat/regenerate/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messageId }),
+  })
+  await consumeStream(res, onChunk, onDone)
+}
+
+export async function setActiveVersion(messageId: string, index: number): Promise<void> {
+  await fetch(`${BASE_URL}/api/chat/message/${messageId}/version`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ index }),
+  })
+}
+
 export async function loadHistory(conversationId: string): Promise<Message[]> {
   const res = await fetch(`${BASE_URL}/api/chat/${conversationId}`)
   if (!res.ok) return []
@@ -71,6 +106,8 @@ export async function loadHistory(conversationId: string): Promise<Message[]> {
     createdAt: new Date(m.createdAt).getTime(),
     citations: m.citations || [],
     metadata: m.metadata || undefined,
+    versions: m.versions || [],
+    activeVersionIndex: m.activeVersionIndex ?? 0,
   }))
 }
 

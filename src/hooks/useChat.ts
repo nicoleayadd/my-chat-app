@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { sendMessageStream, loadHistory } from '../lib/api'
+import { sendMessageStream, regenerateStream, setActiveVersion, loadHistory } from '../lib/api'
 import type { Message } from '../lib/types'
 
 export function useChat(conversationId: string) {
@@ -41,7 +41,15 @@ export function useChat(conversationId: string) {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: payload.fullText, citations: payload.citations, metadata: payload.metadata }
+                ? {
+                    ...m,
+                    id: payload.messageId,
+                    content: payload.fullText,
+                    citations: payload.citations,
+                    metadata: payload.metadata,
+                    versions: payload.versions,
+                    activeVersionIndex: payload.activeVersionIndex,
+                  }
                 : m
             )
           )
@@ -59,5 +67,64 @@ export function useChat(conversationId: string) {
     }
   }
 
-  return { messages, loading, error, send }
+  async function regenerate(messageId: string) {
+    setLoading(true)
+    setError(null)
+    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, content: '' } : m)))
+
+    try {
+      await regenerateStream(
+        messageId,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === messageId ? { ...m, content: m.content + chunk } : m))
+          )
+        },
+        (payload) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    content: payload.fullText,
+                    citations: payload.citations,
+                    metadata: payload.metadata,
+                    versions: payload.versions,
+                    activeVersionIndex: payload.activeVersionIndex,
+                  }
+                : m
+            )
+          )
+        }
+      )
+    } catch (err: any) {
+      setError('Failed to regenerate that response. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function switchVersion(messageId: string, newIndex: number) {
+    const msg = messages.find((m) => m.id === messageId)
+    if (!msg?.versions || !msg.versions[newIndex]) return
+    const version = msg.versions[newIndex]
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              content: version.content,
+              citations: version.citations,
+              metadata: version.metadata ?? undefined,
+              activeVersionIndex: newIndex,
+            }
+          : m
+      )
+    )
+
+    setActiveVersion(messageId, newIndex).catch(() => {})
+  }
+
+  return { messages, loading, error, send, regenerate, switchVersion }
 }

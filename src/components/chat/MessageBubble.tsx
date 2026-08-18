@@ -45,9 +45,27 @@ function MetadataAccordion({ metadata }: { metadata: NonNullable<Message['metada
   )
 }
 
-export function MessageBubble({ message }: { message: Message }) {
+interface Props {
+  message: Message
+  onRegenerate?: (messageId: string) => void
+  onSwitchVersion?: (messageId: string, index: number) => void
+  disabled?: boolean
+}
+
+export function MessageBubble({ message, onRegenerate, onSwitchVersion, disabled }: Props) {
   const isUser = message.role === 'user'
   const isEmpty = !isUser && message.content === ''
+  const [copied, setCopied] = useState(false)
+
+  const versions = message.versions || []
+  const activeIndex = message.activeVersionIndex ?? 0
+  const hasMultipleVersions = versions.length > 1
+
+  function handleCopy() {
+    navigator.clipboard.writeText(message.content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div className={cn('flex w-full flex-col', isUser ? 'items-end' : 'items-start')}>
@@ -105,6 +123,48 @@ export function MessageBubble({ message }: { message: Message }) {
           </div>
         )}
       </div>
+
+      {!isUser && !isEmpty && (
+        <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+          <button onClick={handleCopy} className="hover:text-slate-600" title="Copy">
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+
+          {onRegenerate && (
+            <button
+              onClick={() => onRegenerate(message.id)}
+              disabled={disabled}
+              className="hover:text-slate-600 disabled:opacity-40"
+              title="Regenerate"
+            >
+              Regenerate
+            </button>
+          )}
+
+          {hasMultipleVersions && onSwitchVersion && (
+            <span className="flex items-center gap-1">
+              <button
+                onClick={() => onSwitchVersion(message.id, activeIndex - 1)}
+                disabled={activeIndex === 0}
+                className="hover:text-slate-600 disabled:opacity-30"
+              >
+                ‹
+              </button>
+              <span>
+                {activeIndex + 1}/{versions.length}
+              </span>
+              <button
+                onClick={() => onSwitchVersion(message.id, activeIndex + 1)}
+                disabled={activeIndex === versions.length - 1}
+                className="hover:text-slate-600 disabled:opacity-30"
+              >
+                ›
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
       {!isUser && !isEmpty && message.metadata && <MetadataAccordion metadata={message.metadata} />}
     </div>
   )

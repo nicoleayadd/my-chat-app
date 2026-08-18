@@ -5,12 +5,24 @@ export async function connectDB() {
   console.log('MongoDB connected')
 }
 
+const versionSchema = new mongoose.Schema(
+  {
+    content: String,
+    citations: Array,
+    metadata: Object,
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+)
+
 const messageSchema = new mongoose.Schema({
   conversationId: { type: String, required: true, index: true },
   role: { type: String, enum: ['user', 'assistant'], required: true },
   content: { type: String, required: true },
   citations: { type: Array, default: [] },
   metadata: { type: Object, default: null },
+  versions: { type: [versionSchema], default: [] },
+  activeVersionIndex: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 })
 

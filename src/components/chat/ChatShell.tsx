@@ -8,7 +8,7 @@ import { getConversationId, startNewConversation, setActiveConversationId } from
 export function ChatShell() {
   const [conversationId, setConversationId] = useState(getConversationId())
   const [refreshKey, setRefreshKey] = useState(0)
-  const { messages, loading, error, send } = useChat(conversationId)
+  const { messages, loading, error, send, regenerate, switchVersion } = useChat(conversationId)
 
   function handleNewChat() {
     const id = startNewConversation()
@@ -42,7 +42,12 @@ export function ChatShell() {
             {error}
           </div>
         )}
-        <MessageList messages={messages} />
+        <MessageList
+          messages={messages}
+          onRegenerate={regenerate}
+          onSwitchVersion={switchVersion}
+          disabled={loading}
+        />
         <MessageInput onSend={handleSend} disabled={loading} />
       </div>
     </div>
