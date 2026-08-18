@@ -22,20 +22,20 @@ export function ChatShell() {
 
   async function handleSend(content: string) {
     await send(content)
-    setRefreshKey((k) => k + 1) // refresh sidebar so new/updated chats show up
+    setRefreshKey((k) => k + 1)
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-slate-100">
       <ConversationSidebar
         activeId={conversationId}
         onSelect={handleSelect}
         onNewChat={handleNewChat}
         refreshKey={refreshKey}
       />
-      <div className="flex flex-col flex-1 max-w-2xl mx-auto border-x">
-        <header className="border-b px-4 py-3">
-          <h1 className="text-lg font-semibold text-gray-900">AI Assistant</h1>
+      <div className="flex flex-col flex-1 bg-white shadow-sm">
+        <header className="border-b px-4 py-3 bg-indigo-600">
+          <h1 className="text-lg font-semibold text-white">AI Assistant</h1>
         </header>
         {error && (
           <div className="bg-red-50 text-red-700 text-sm px-4 py-2 border-b border-red-100">

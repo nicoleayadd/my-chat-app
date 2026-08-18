@@ -7,8 +7,8 @@ export function MessageBubble({ message }: { message: Message }) {
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[75%] rounded-2xl px-4 py-2 text-sm',
-          isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
+          'max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm',
+          isUser ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-900'
         )}
       >
         {message.content}
