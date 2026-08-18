@@ -12,31 +12,45 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 await connectDB()
 
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { message, conversationId } = req.body
+app.post('/api/chat/stream', async (req, res) => {
+  const { message, conversationId } = req.body
 
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  try {
     await MessageModel.create({ conversationId, role: 'user', content: message })
 
-    // Pull past messages for this conversation to give Gemini context
     const history = await MessageModel.find({ conversationId }).sort({ createdAt: 1 })
-
     const contents = history.map((m) => ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: m.content }],
     }))
 
-    const response = await ai.models.generateContent({
+    const stream = await ai.models.generateContentStream({
       model: 'gemini-3.6-flash',
       contents,
     })
 
-    await MessageModel.create({ conversationId, role: 'assistant', content: response.text })
+    let fullText = ''
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        fullText += chunk.text
+        res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`)
+      }
+    }
 
-    res.json({ content: response.text })
+    await MessageModel.create({ conversationId, role: 'assistant', content: fullText })
+
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+    res.end()
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Something went wrong' })
+    const isRateLimit = err?.status === 429 || err?.error?.code === 429
+    res.write(`data: ${JSON.stringify({ error: isRateLimit ? 'rate_limit' : 'server_error' })}\n\n`)
+    res.end()
   }
 })
 

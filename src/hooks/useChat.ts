@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { sendMessage, loadHistory } from '../lib/api'
+import { sendMessageStream, loadHistory, getConversationId } from '../lib/api'
 import type { Message } from '../lib/types'
 
 export function useChat() {
@@ -20,12 +20,19 @@ export function useChat() {
 
   async function send(content: string) {
     if (!content.trim()) return
+    const conversationId = getConversationId()
     const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content, createdAt: Date.now() }
-    setMessages((prev) => [...prev, userMsg])
+    const assistantId = crypto.randomUUID()
+
+    setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', createdAt: Date.now() }])
     setLoading(true)
+
     try {
-      const reply = await sendMessage(content)
-      setMessages((prev) => [...prev, reply])
+      await sendMessageStream(conversationId, content, (chunk) => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))
+        )
+      })
     } finally {
       setLoading(false)
     }

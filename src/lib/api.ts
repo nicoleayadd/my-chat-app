@@ -40,3 +40,40 @@ export async function loadHistory(): Promise<Message[]> {
     createdAt: new Date(m.createdAt).getTime(),
   }))
 }
+
+export async function sendMessageStream(
+  conversationId: string,
+  newContent: string,
+  onChunk: (text: string) => void
+): Promise<void> {
+  const res = await fetch('http://localhost:3001/api/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: newContent, conversationId }),
+  })
+
+  if (!res.ok || !res.body) {
+    throw new Error('SERVER_ERROR')
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    const parts = buffer.split('\n\n')
+    buffer = parts.pop() || ''
+
+    for (const part of parts) {
+      if (!part.startsWith('data: ')) continue
+      const payload = JSON.parse(part.slice(6))
+      if (payload.error === 'rate_limit') throw new Error('RATE_LIMIT')
+      if (payload.error) throw new Error('SERVER_ERROR')
+      if (payload.text) onChunk(payload.text)
+    }
+  }
+}
