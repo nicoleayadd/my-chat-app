@@ -216,5 +216,15 @@ app.get('/api/conversations', async (req, res) => {
   res.json(conversations)
 })
 
+app.delete('/api/conversations/:conversationId', async (req, res) => {
+  try {
+    await MessageModel.deleteMany({ conversationId: req.params.conversationId })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'server error' })
+  }
+})
+
 const PORT = 3001
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`))

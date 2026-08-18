@@ -3,7 +3,12 @@ import { useChat } from '../../hooks/useChat'
 import { MessageList } from './MessageList'
 import { MessageInput } from './MessageInput'
 import { ConversationSidebar } from './ConversationSidebar'
-import { getConversationId, startNewConversation, setActiveConversationId } from '../../lib/api'
+import {
+  getConversationId,
+  startNewConversation,
+  setActiveConversationId,
+  deleteConversation,
+} from '../../lib/api'
 
 export function ChatShell() {
   const [conversationId, setConversationId] = useState(getConversationId())
@@ -25,12 +30,22 @@ export function ChatShell() {
     setRefreshKey((k) => k + 1)
   }
 
+  async function handleDelete(id: string) {
+    await deleteConversation(id)
+    if (id === conversationId) {
+      const newId = startNewConversation()
+      setConversationId(newId)
+    }
+    setRefreshKey((k) => k + 1)
+  }
+
   return (
     <div className="flex h-screen bg-slate-100">
       <ConversationSidebar
         activeId={conversationId}
         onSelect={handleSelect}
         onNewChat={handleNewChat}
+        onDelete={handleDelete}
         refreshKey={refreshKey}
       />
       <div className="flex flex-col flex-1 bg-white shadow-sm">

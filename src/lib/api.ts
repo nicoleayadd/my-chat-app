@@ -133,3 +133,10 @@ export async function loadConversations(): Promise<ConversationSummary[]> {
   if (!res.ok) return []
   return res.json()
 }
+
+export async function deleteConversation(conversationId: string): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}/api/conversations/${conversationId}`, {
+    method: 'DELETE',
+  })
+  return res.ok
+}
